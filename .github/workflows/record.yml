@@ -52,7 +52,11 @@ jobs:
           grep -n "error:" "$RUNNER_TEMP/build.log" | head -30 || true
           tail -15 "$RUNNER_TEMP/build.log" || true
           [ $RC -eq 0 ] || exit $RC
-          find "$RUNNER_TEMP/dd/Build/Products/Release-iphonesimulator" -maxdepth 1 -name "*.app" -print
+          APP=$(find "$RUNNER_TEMP/dd/Build/Products/Release-iphonesimulator" -maxdepth 1 -name "*.app" -print | head -1)
+          echo "APP=$APP"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          ls -l "$APP" | head -20
+          ls -l "$APP/main.jsbundle" || true
 
       - name: Boot simulator
         run: |
@@ -60,15 +64,11 @@ jobs:
           xcrun simctl bootstatus "${{ steps.sim.outputs.name }}" -b || true
           xcrun simctl status_bar "${{ steps.sim.outputs.name }}" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
 
-      - name: Install app and Maestro
+      - name: Install app
         run: |
           DEV="${{ steps.sim.outputs.name }}"
-          APP=$(find "$RUNNER_TEMP/dd/Build/Products/Release-iphonesimulator" -maxdepth 1 -name "*.app")
-          echo "APP=$APP"
           xcrun simctl install "$DEV" "$APP"
-          curl -Ls "https://get.maestro.mobile.dev" | bash
-          export PATH="$HOME/.maestro/bin:$PATH"
-          maestro --version
+          xcrun simctl get_app_container "$DEV" com.lixing.sitemath app || true
 
       - name: Record launch and tour
         run: |
@@ -76,30 +76,33 @@ jobs:
           DEV="${{ steps.sim.outputs.name }}"
           OUT="$RUNNER_TEMP/rec"
           mkdir -p "$OUT"
-          echo "--- bundle ---"
-          ls -l "$APP" | head -30
-          echo "--- console launch ---"
-          timeout 25 xcrun simctl launch --console-pty "$DEV" com.lixing.sitemath 2>&1 | tail -80 || true
           xcrun simctl terminate "$DEV" com.lixing.sitemath || true
-          echo "--- crash reports ---"
-          ls -lt ~/Library/Logs/DiagnosticReports 2>/dev/null | head -6 || true
-          CR=$(ls -t ~/Library/Logs/DiagnosticReports/*SiteMath* 2>/dev/null | head -1 || true)
-          if [ -n "$CR" ]; then sed -n '1,90p' "$CR"; fi          xcrun simctl terminate "$DEV" com.lixing.sitemath || true
           xcrun simctl io "$DEV" recordVideo --codec h264 --force "$OUT/sitemath-review.mp4" &
           RPID=$!
           sleep 2
-          xcrun simctl launch "$DEV" com.lixing.sitemath || echo "LAUNCH FAILED"
-          sleep 6
-          xcrun simctl io "$DEV" screenshot "$OUT/t06.png"
-          sleep 28
-          xcrun simctl io "$DEV" screenshot "$OUT/t34.png"
-          sleep 10
-          xcrun simctl io "$DEV" screenshot "$OUT/t44.png"
+          xcrun simctl launch --console-pty "$DEV" com.lixing.sitemath > "$OUT/console.log" 2>&1 &
+          CPID=$!
+          sleep 5
+          xcrun simctl io "$DEV" screenshot "$OUT/t05.png"
+          sleep 4
+          xcrun simctl io "$DEV" screenshot "$OUT/t09.png"
+          sleep 12
+          xcrun simctl io "$DEV" screenshot "$OUT/t21.png"
+          sleep 12
+          xcrun simctl io "$DEV" screenshot "$OUT/t33.png"
+          sleep 8
+          xcrun simctl io "$DEV" screenshot "$OUT/t41.png"
+          kill "$CPID" 2>/dev/null || true
           kill -INT $RPID || true
           wait $RPID || true
           sleep 2
           ls -l "$OUT"
-          xcrun simctl spawn "$DEV" log show --last 3m --predicate 'processImagePath CONTAINS "SiteMath"' --style compact 2>/dev/null | tail -60 || true
+          echo "--- console ---"
+          tail -80 "$OUT/console.log" || true
+          echo "--- crash reports ---"
+          ls -lt ~/Library/Logs/DiagnosticReports 2>/dev/null | head -8 || true
+          CR=$(ls -t ~/Library/Logs/DiagnosticReports/*SiteMath* 2>/dev/null | head -1 || true)
+          if [ -n "$CR" ]; then cp "$CR" "$OUT/$(basename "$CR")"; sed -n '1,70p' "$CR"; fi
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -107,12 +110,8 @@ jobs:
           name: sitemath-review-recording
           path: |
             ${{ runner.temp }}/rec/*.mp4
-            ${{ runner.temp }}/rec/**/*.png
+            ${{ runner.temp }}/rec/*.png
+            ${{ runner.temp }}/rec/*.log
+            ${{ runner.temp }}/rec/*.ips
           if-no-files-found: warn
           retention-days: 14
-
-
-
-
-
-
