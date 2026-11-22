@@ -52,7 +52,7 @@
     },
     "plugins": [
       "expo-file-system",
-      "./plugins/withDeploymentTarget"
+      "./plugins/withDeploymentTarget.cjs"
     ],
     "owner": "lm203688",
     "extra": {
@@ -62,3 +62,4 @@
     }
   }
 }
+

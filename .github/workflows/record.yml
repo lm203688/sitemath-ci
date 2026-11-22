@@ -18,7 +18,7 @@ jobs:
         run: npm ci --legacy-peer-deps || npm install --no-audit --no-fund
 
       - name: Prebuild iOS project
-        run: npx expo prebuild --platform ios --clean --non-interactive
+        run: npx expo prebuild --platform ios --clean
 
       - name: Pick a 6.9in simulator
         id: sim
@@ -91,3 +91,4 @@ jobs:
             ${{ runner.temp }}/rec/**/*.png
           if-no-files-found: warn
           retention-days: 14
+
