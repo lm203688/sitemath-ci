@@ -1,0 +1,31 @@
+name: inspect
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install JS deps
+        run: npm ci --legacy-peer-deps || npm install --no-audit --no-fund
+      - name: Prebuild
+        run: CI=1 npx expo prebuild --platform ios --clean --no-install
+      - name: Dump template files and runtimes
+        run: |
+          echo "=== runtimes ==="
+          xcrun simctl list runtimes
+          echo "=== devices ==="
+          xcrun simctl list devices available | head -40
+          echo "=== swift files ==="
+          find ios -name "*.swift" -maxdepth 3 -print
+          for f in $(find ios -name "*.swift" -maxdepth 3); do echo "===== $f ====="; cat "$f"; done
+          echo "=== Info.plist ==="
+          cat ios/*/Info.plist
+          echo "=== app.json ==="
+          cat app.json
