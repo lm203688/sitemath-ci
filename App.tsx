@@ -143,6 +143,30 @@ export default function App() {
 
   const total = useMemo(() => D.jobTotal(job), [job]);
 
+  // Scripted tour, only for the App Review recording build (EXPO_PUBLIC_TOUR=1).
+  useEffect(() => {
+    if (process.env.EXPO_PUBLIC_TOUR !== '1') return;
+    const demoJob = [
+      D.newJobLine('Rectangular slab', 'Concrete', 7.41, 'yd³'),
+      D.newJobLine('Rectangular slab', '80 lb bags', 30, 'bags'),
+      D.newJobLine('Rebar grid', 'Rebar #4', 26, '(20 ft) sticks'),
+    ];
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
+    at(4000, () => setScreen({ kind: 'tool', id: 'slab-rect' }));
+    at(10000, () => setUnits('metric'));
+    at(14000, () => setUnits('imperial'));
+    at(18000, () => {
+      setJob(demoJob);
+      setScreen({ kind: 'job' });
+    });
+    at(24000, () => setScreen({ kind: 'list' }));
+    at(27000, () => setScreen({ kind: 'tool', id: 'rebar-grid' }));
+    at(32000, () => setScreen({ kind: 'tool', id: 'length-math' }));
+    at(37000, () => setScreen({ kind: 'list' }));
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
   if (screen.kind === 'tool') {
     const tool = toolById(screen.id);
     if (!tool) return <ListScreen tools={TOOLS} units={units} onToggleUnits={toggleUnits} onOpen={(id) => setScreen({ kind: 'tool', id })} job={job} onJob={() => setScreen({ kind: 'job' })} />;

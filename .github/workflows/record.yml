@@ -7,6 +7,8 @@ jobs:
   record:
     runs-on: xcode-27
     timeout-minutes: 90
+    env:
+      EXPO_PUBLIC_TOUR: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -72,20 +74,24 @@ jobs:
         run: |
           set -x
           DEV="${{ steps.sim.outputs.name }}"
-          export PATH="$HOME/.maestro/bin:$PATH"
           OUT="$RUNNER_TEMP/rec"
           mkdir -p "$OUT"
           xcrun simctl terminate "$DEV" com.lixing.sitemath || true
           xcrun simctl io "$DEV" recordVideo --codec h264 --force "$OUT/sitemath-review.mp4" &
           RPID=$!
-          sleep 3
-          maestro test flow.yaml --test-output-dir "$OUT/maestro" || true
           sleep 2
+          xcrun simctl launch "$DEV" com.lixing.sitemath || echo "LAUNCH FAILED"
+          sleep 6
+          xcrun simctl io "$DEV" screenshot "$OUT/t06.png"
+          sleep 28
+          xcrun simctl io "$DEV" screenshot "$OUT/t34.png"
+          sleep 10
+          xcrun simctl io "$DEV" screenshot "$OUT/t44.png"
           kill -INT $RPID || true
           wait $RPID || true
           sleep 2
           ls -l "$OUT"
-          find "$OUT" -name "*.png" | head -20
+          xcrun simctl spawn "$DEV" log show --last 3m --predicate 'processImagePath CONTAINS "SiteMath"' --style compact 2>/dev/null | tail -60 || true
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -96,6 +102,8 @@ jobs:
             ${{ runner.temp }}/rec/**/*.png
           if-no-files-found: warn
           retention-days: 14
+
+
 
 
 
