@@ -22,9 +22,6 @@ jobs:
       - name: Prebuild iOS project (no pods)
         run: CI=1 npx expo prebuild --platform ios --clean --no-install
 
-      - name: Adopt UIScene lifecycle
-        run: bash scripts/scene-patch.sh
-
       - name: Pin Pods deployment target
         run: |
           ruby scripts/pin-pods.rb
@@ -118,3 +115,4 @@ jobs:
             ${{ runner.temp }}/rec/*.ips
           if-no-files-found: warn
           retention-days: 14
+
