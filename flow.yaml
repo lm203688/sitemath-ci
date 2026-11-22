@@ -1,0 +1,29 @@
+appId: com.lixing.sitemath
+---
+- launchApp
+- waitForAnimationToEnd
+- takeScreenshot: 01_tools
+- tapOn: "^Rectangular slab.*"
+- waitForAnimationToEnd
+- takeScreenshot: 02_slab_us
+- tapOn: "Metric"
+- waitForAnimationToEnd
+- takeScreenshot: 03_slab_metric
+- tapOn: "US"
+- waitForAnimationToEnd
+- tapOn: "Add to job takeoff"
+- waitForAnimationToEnd
+- takeScreenshot: 04_job
+- tapOn: "‹ Back"
+- waitForAnimationToEnd
+- tapOn: "^Rebar grid.*"
+- waitForAnimationToEnd
+- takeScreenshot: 05_rebar
+- tapOn: "‹ Back"
+- waitForAnimationToEnd
+- tapOn: "^Feet . inch . fraction.*"
+- waitForAnimationToEnd
+- takeScreenshot: 06_length
+- tapOn: "‹ Back"
+- waitForAnimationToEnd
+- takeScreenshot: 07_back_to_list

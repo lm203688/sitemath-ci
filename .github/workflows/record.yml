@@ -1,0 +1,93 @@
+name: record
+
+on:
+  workflow_dispatch:
+
+jobs:
+  record:
+    runs-on: xcode-27
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install JS deps
+        run: npm ci --legacy-peer-deps || npm install --no-audit --no-fund
+
+      - name: Prebuild iOS project
+        run: npx expo prebuild --platform ios --clean --non-interactive
+
+      - name: Pick a 6.9in simulator
+        id: sim
+        run: |
+          NAME=$(xcrun simctl list devices available | grep -o 'iPhone 1[6-9] Pro Max' | head -1)
+          if [ -z "$NAME" ]; then NAME=$(xcrun simctl list devices available | grep -o 'iPhone 1[6-9] Plus' | head -1); fi
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "using: $NAME"
+
+      - name: Build release app for simulator
+        run: |
+          set -o pipefail
+          cd ios
+          WORKSPACE=$(ls -d *.xcworkspace | head -1)
+          SCHEME="${WORKSPACE%.xcworkspace}"
+          xcodebuild build \
+            -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -20
+          find "$RUNNER_TEMP/dd/Build/Products/Release-iphonesimulator" -maxdepth 1 -name "*.app" -print
+
+      - name: Boot simulator
+        run: |
+          xcrun simctl boot "${{ steps.sim.outputs.name }}" || true
+          xcrun simctl bootstatus "${{ steps.sim.outputs.name }}" -b || true
+          xcrun simctl status_bar "${{ steps.sim.outputs.name }}" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
+
+      - name: Install app and Maestro
+        run: |
+          DEV="${{ steps.sim.outputs.name }}"
+          APP=$(find "$RUNNER_TEMP/dd/Build/Products/Release-iphonesimulator" -maxdepth 1 -name "*.app")
+          echo "APP=$APP"
+          xcrun simctl install "$DEV" "$APP"
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          export PATH="$HOME/.maestro/bin:$PATH"
+          maestro --version
+
+      - name: Record launch and tour
+        run: |
+          set -x
+          DEV="${{ steps.sim.outputs.name }}"
+          export PATH="$HOME/.maestro/bin:$PATH"
+          OUT="$RUNNER_TEMP/rec"
+          mkdir -p "$OUT"
+          xcrun simctl terminate "$DEV" com.lixing.sitemath || true
+          xcrun simctl io "$DEV" recordVideo --codec h264 --force "$OUT/sitemath-review.mp4" &
+          RPID=$!
+          sleep 3
+          maestro test flow.yaml --test-output-dir "$OUT/maestro" || true
+          sleep 2
+          kill -INT $RPID || true
+          wait $RPID || true
+          sleep 2
+          ls -l "$OUT"
+          find "$OUT" -name "*.png" | head -20
+
+      - name: Launch log
+        if: always()
+        continue-on-error: true
+        run: |
+          xcrun simctl spawn booted log show --last 5m --predicate 'processImagePath CONTAINS "SiteMath"' 2>/dev/null | tail -40 || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sitemath-review-recording
+          path: |
+            ${{ runner.temp }}/rec/*.mp4
+            ${{ runner.temp }}/rec/**/*.png
+          if-no-files-found: warn
+          retention-days: 14
