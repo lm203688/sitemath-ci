@@ -50,7 +50,7 @@
         ]
       }
     },
-    "plugins": ["./plugins/withUIScene", 
+    "plugins": ["./plugins/withUIScene.cjs", 
       "expo-file-system"
     ],
     "owner": "lm203688",
@@ -61,4 +61,5 @@
     }
   }
 }
+
 
