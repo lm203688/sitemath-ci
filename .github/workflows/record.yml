@@ -39,11 +39,17 @@ jobs:
           cd ios
           WORKSPACE=$(ls -d *.xcworkspace | head -1)
           SCHEME="${WORKSPACE%.xcworkspace}"
+          set +e
           xcodebuild build \
             -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/dd" \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -20
+            CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/build.log" 2>&1
+          RC=$?
+          echo "xcodebuild rc=$RC"
+          grep -n "error:" "$RUNNER_TEMP/build.log" | head -30 || true
+          tail -15 "$RUNNER_TEMP/build.log" || true
+          [ $RC -eq 0 ] || exit $RC
           find "$RUNNER_TEMP/dd/Build/Products/Release-iphonesimulator" -maxdepth 1 -name "*.app" -print
 
       - name: Boot simulator
@@ -90,4 +96,5 @@ jobs:
             ${{ runner.temp }}/rec/**/*.png
           if-no-files-found: warn
           retention-days: 14
+
 
