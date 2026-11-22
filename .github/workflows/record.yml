@@ -22,16 +22,7 @@ jobs:
 
       - name: Pin Pods deployment target
         run: |
-          cat >> ios/Podfile <<'EOF'
-
-          post_install do |installer|
-            installer.pods_project.targets.each do |t|
-              t.build_configurations.each do |c|
-                c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
-              end
-            end
-          end
-          EOF
+          ruby scripts/pin-pods.rb
           cd ios && pod install
 
       - name: Pick a 6.9in simulator
@@ -99,3 +90,4 @@ jobs:
             ${{ runner.temp }}/rec/**/*.png
           if-no-files-found: warn
           retention-days: 14
+
