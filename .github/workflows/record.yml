@@ -76,7 +76,15 @@ jobs:
           DEV="${{ steps.sim.outputs.name }}"
           OUT="$RUNNER_TEMP/rec"
           mkdir -p "$OUT"
+          echo "--- bundle ---"
+          ls -l "$APP" | head -30
+          echo "--- console launch ---"
+          timeout 25 xcrun simctl launch --console-pty "$DEV" com.lixing.sitemath 2>&1 | tail -80 || true
           xcrun simctl terminate "$DEV" com.lixing.sitemath || true
+          echo "--- crash reports ---"
+          ls -lt ~/Library/Logs/DiagnosticReports 2>/dev/null | head -6 || true
+          CR=$(ls -t ~/Library/Logs/DiagnosticReports/*SiteMath* 2>/dev/null | head -1 || true)
+          if [ -n "$CR" ]; then sed -n '1,90p' "$CR"; fi          xcrun simctl terminate "$DEV" com.lixing.sitemath || true
           xcrun simctl io "$DEV" recordVideo --codec h264 --force "$OUT/sitemath-review.mp4" &
           RPID=$!
           sleep 2
@@ -102,6 +110,7 @@ jobs:
             ${{ runner.temp }}/rec/**/*.png
           if-no-files-found: warn
           retention-days: 14
+
 
 
 
