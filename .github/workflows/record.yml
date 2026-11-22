@@ -17,8 +17,22 @@ jobs:
       - name: Install JS deps
         run: npm ci --legacy-peer-deps || npm install --no-audit --no-fund
 
-      - name: Prebuild iOS project
-        run: npx expo prebuild --platform ios --clean
+      - name: Prebuild iOS project (no pods)
+        run: CI=1 npx expo prebuild --platform ios --clean --no-install
+
+      - name: Pin Pods deployment target
+        run: |
+          cat >> ios/Podfile <<'EOF'
+
+          post_install do |installer|
+            installer.pods_project.targets.each do |t|
+              t.build_configurations.each do |c|
+                c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+              end
+            end
+          end
+          EOF
+          cd ios && pod install
 
       - name: Pick a 6.9in simulator
         id: sim
@@ -76,12 +90,6 @@ jobs:
           ls -l "$OUT"
           find "$OUT" -name "*.png" | head -20
 
-      - name: Launch log
-        if: always()
-        continue-on-error: true
-        run: |
-          xcrun simctl spawn booted log show --last 5m --predicate 'processImagePath CONTAINS "SiteMath"' 2>/dev/null | tail -40 || true
-
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -91,4 +99,3 @@ jobs:
             ${{ runner.temp }}/rec/**/*.png
           if-no-files-found: warn
           retention-days: 14
-
