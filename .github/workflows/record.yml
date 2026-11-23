@@ -58,6 +58,17 @@ jobs:
           ls -l "$APP" | head -20
           ls -l "$APP/main.jsbundle" || true
 
+      - name: Verify UIScene adoption in built app
+        run: |
+          set -e
+          echo "== generated AppDelegate.swift =="
+          grep -n "class SceneDelegate" ios/*/AppDelegate.swift || { echo "FAIL: SceneDelegate not appended by withUIScene"; exit 1; }
+          echo "== built app Info.plist =="
+          plutil -p "$APP/Info.plist" > "$RUNNER_TEMP/app-info-plist.txt"
+          grep -n "UIApplicationSceneManifest" "$RUNNER_TEMP/app-info-plist.txt" || { echo "FAIL: UIApplicationSceneManifest missing from built app"; exit 1; }
+          sed -n '/UIApplicationSceneManifest/,+12p' "$RUNNER_TEMP/app-info-plist.txt"
+          echo "OK: scene manifest present, SceneDelegate compiled into the app"
+
       - name: Boot simulator
         run: |
           xcrun simctl boot "${{ steps.sim.outputs.name }}" || true
