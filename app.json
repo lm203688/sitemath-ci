@@ -2,7 +2,7 @@
   "expo": {
     "name": "SiteMath",
     "slug": "sitemath",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -11,7 +11,7 @@
       "bundleIdentifier": "com.lixing.sitemath",
       "supportsTablet": false,
       "deploymentTarget": "16.4",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "config": {
         "usesNonExemptEncryption": false
       },
@@ -50,7 +50,8 @@
         ]
       }
     },
-    "plugins": ["./plugins/withUIScene.cjs", 
+    "plugins": [
+      "./plugins/withUIScene.cjs",
       "expo-file-system"
     ],
     "owner": "lm203688",
@@ -61,5 +62,3 @@
     }
   }
 }
-
-
